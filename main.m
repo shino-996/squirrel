@@ -79,6 +79,10 @@ int main(int argc, char *argv[]) {
       [NSApp.squirrelAppDelegate loadSettings];
       NSLog(@"Squirrel reporting!");
     }
+    
+    // 添加a中英文状态的状态栏图标
+    NSStatusItem *statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength];
+    NSApp.squirrelAppDelegate.asciiStatusItem = statusItem;
 
     // finally run everything
     [[NSApplication sharedApplication] run];
