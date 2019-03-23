@@ -3,6 +3,9 @@
 @class SquirrelConfig;
 @class SquirrelPanel;
 
+// 全局变量, 当前是否为 ascii mode
+extern BOOL g_asciiMode;
+
 // Note: the SquirrelApplicationDelegate is instantiated automatically as an outlet of NSApp's instance
 @interface SquirrelApplicationDelegate : NSObject
 

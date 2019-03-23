@@ -5,6 +5,7 @@
 #import "SquirrelPanel.h"
 
 static NSString *const kRimeWikiURL = @"https://github.com/rime/home/wiki";
+BOOL g_asciiMode = NO;
 
 @implementation SquirrelApplicationDelegate
 
@@ -88,6 +89,7 @@ void notification_handler(void* context_object, RimeSessionId session_id,
         !strcmp(message_value, "!ascii_mode")) {
       static bool was_ascii_mode = false;
       bool is_ascii_mode = (message_value[0] != '!');
+      g_asciiMode = is_ascii_mode;
       if (is_ascii_mode != was_ascii_mode) {
         was_ascii_mode = is_ascii_mode;
         show_status_message(message_value, message_type);

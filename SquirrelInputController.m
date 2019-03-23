@@ -108,6 +108,11 @@
         [self rimeUpdate];
       } break;
       case NSKeyDown: {
+        // 如果当前中英文状态与 ascii mode 全局状态不符, 切换一下状态
+        if (rime_get_api()->get_option(_session, "ascii_mode") != g_asciiMode) {
+          rime_get_api()->set_option(_session, "ascii_mode", g_asciiMode);
+        }
+        
         // ignore Command+X hotkeys.
         if (modifiers & OSX_COMMAND_MASK)
           break;
