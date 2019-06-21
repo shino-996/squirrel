@@ -103,6 +103,7 @@ void notification_handler(void* context_object, RimeSessionId session_id,
         }
         [string addAttribute:NSFontAttributeName
                        value:[NSFont systemFontOfSize:18] range:NSMakeRange(0, string.length)];
+        NSApp.squirrelAppDelegate.asciiStatusItem.button.attributedTitle = string;
       }
     }
     else if (!strcmp(message_value, "full_shape") ||
