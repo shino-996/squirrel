@@ -101,8 +101,11 @@ void notification_handler(void* context_object, RimeSessionId session_id,
         } else {
           string = [[NSMutableAttributedString alloc] initWithString:@"ㄓ"];
         }
-        [string addAttribute:NSFontAttributeName
-                       value:[NSFont systemFontOfSize:18] range:NSMakeRange(0, string.length)];
+        [string addAttributes:@{
+          NSFontAttributeName: [NSFont systemFontOfSize:18],
+          NSBaselineOffsetAttributeName: @(-1.5)
+        }
+                        range:NSMakeRange(0, string.length)];
         NSApp.squirrelAppDelegate.asciiStatusItem.button.attributedTitle = string;
       }
     }

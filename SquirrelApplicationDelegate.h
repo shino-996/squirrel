@@ -13,7 +13,7 @@ extern BOOL g_asciiMode;
 @property(nonatomic, strong) IBOutlet SquirrelPanel *panel;
 @property(nonatomic, strong) IBOutlet id updater;
 
-// 状态栏图标, 显示当前的中英亠状态
+// 状态栏图标, 显示当前的中英文状态
 @property(nonatomic, strong) NSStatusItem *asciiStatusItem;
 
 @property(nonatomic, readonly, strong) SquirrelConfig *config;
