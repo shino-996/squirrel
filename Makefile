@@ -12,7 +12,8 @@ RIME_LIB_DIR = librime/dist/lib
 RIME_LIBRARY_FILE_NAME = librime.1.dylib
 RIME_LIBRARY = lib/$(RIME_LIBRARY_FILE_NAME)
 
-RIME_DEPS = librime/thirdparty/lib/libmarisa.a \
+RIME_DEPS = librime/thirdparty/lib/libcapnp.a \
+	librime/thirdparty/lib/libmarisa.a \
 	librime/thirdparty/lib/libleveldb.a \
 	librime/thirdparty/lib/libopencc.a \
 	librime/thirdparty/lib/libyaml-cpp.a
@@ -20,8 +21,8 @@ PLUM_DATA = bin/rime-install \
 	data/plum/default.yaml \
 	data/plum/symbols.yaml \
 	data/plum/essay.txt
-OPENCC_DATA = data/opencc/TSCharacters.ocd \
-	data/opencc/TSPhrases.ocd \
+OPENCC_DATA = data/opencc/TSCharacters.ocd2 \
+	data/opencc/TSPhrases.ocd2 \
 	data/opencc/t2s.json
 DEPS_CHECK = $(RIME_LIBRARY) $(PLUM_DATA) $(OPENCC_DATA)
 
@@ -80,13 +81,18 @@ copy-opencc-data:
 
 deps: librime data
 
+ifdef ARCHS
+BUILD_SETTINGS += ARCHS="$(ARCHS)"
+BUILD_SETTINGS += ONLY_ACTIVE_ARCH=NO
+endif
+
 release: $(DEPS_CHECK)
 	bash package/add_data_files
-	xcodebuild -project Squirrel.xcodeproj -configuration Release build | grep -v setenv | tee build.log
+	xcodebuild -project Squirrel.xcodeproj -configuration Release $(BUILD_SETTINGS) build
 
 debug: $(DEPS_CHECK)
 	bash package/add_data_files
-	xcodebuild -project Squirrel.xcodeproj -configuration Debug build | grep -v setenv | tee build.log
+	xcodebuild -project Squirrel.xcodeproj -configuration Debug $(BUILD_SETTINGS) build
 
 .PHONY: package archive sign-archive
 
@@ -126,7 +132,7 @@ clean:
 	rm bin/* > /dev/null 2>&1 || true
 	rm lib/* > /dev/null 2>&1 || true
 	rm data/plum/* > /dev/null 2>&1 || true
-	rm data/opencc/*.ocd > /dev/null 2>&1 || true
+	rm data/opencc/* > /dev/null 2>&1 || true
 
 clean-deps:
 	$(MAKE) -C plum clean

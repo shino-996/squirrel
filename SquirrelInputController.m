@@ -80,7 +80,7 @@ const int N_KEY_ROLL_OVER = 50;
         //NSLog(@"FLAGSCHANGED client: %@, modifiers: 0x%lx", sender, modifiers);
         int rime_modifiers = osx_modifiers_to_rime_modifiers(modifiers);
         int release_mask = 0;
-        int changes = _lastModifier ^ modifiers;
+        NSUInteger changes = _lastModifier ^ modifiers;
         if (changes & OSX_CAPITAL_MASK) {
           // NOTE: rime assumes XK_Caps_Lock to be sent before modifier changes,
           // while NSFlagsChanged event has the flag changed already.
@@ -121,12 +121,12 @@ const int N_KEY_ROLL_OVER = 50;
         if (modifiers & OSX_COMMAND_MASK)
           break;
 
-        NSInteger keyCode = event.keyCode;
+        int keyCode = event.keyCode;
         NSString* keyChars = event.charactersIgnoringModifiers;
         if (!isalpha(keyChars.UTF8String[0])) {
           keyChars = event.characters;
         }
-        //NSLog(@"KEYDOWN client: %@, modifiers: 0x%lx, keyCode: %ld, keyChars: [%@]",
+        //NSLog(@"KEYDOWN client: %@, modifiers: 0x%lx, keyCode: %d, keyChars: [%@]",
         //      sender, modifiers, keyCode, keyChars);
 
         // translate osx keyevents to rime keyevents
@@ -312,12 +312,13 @@ const int N_KEY_ROLL_OVER = 50;
 -(void)commitComposition:(id)sender
 {
   //NSLog(@"commitComposition:");
-  // - FIXME: chrome's address bar issues this callback when showing suggestions.
-  if ([[sender bundleIdentifier] isEqualToString:@"com.google.Chrome"])
-    return;
-  // force committing existing Rime composition
-  if (_session && rime_get_api()->commit_composition(_session)) {
-    [self rimeConsumeCommittedText];
+  // commit raw input
+  if (_session) {
+    const char* raw_input = rime_get_api()->get_input(_session);
+    if (raw_input) {
+      [self commitString: @(raw_input)];
+      rime_get_api()->clear_composition(_session);
+    }
   }
 }
 
@@ -499,8 +500,9 @@ const int N_KEY_ROLL_OVER = 50;
       _schemaId = @(status.schema_id);
       [NSApp.squirrelAppDelegate loadSchemaSpecificSettings:_schemaId];
       // inline preedit
-      _inlinePreedit = NSApp.squirrelAppDelegate.panel.inlinePreedit &&
-          !rime_get_api()->get_option(_session, "no_inline");  // not disabled in app options
+      _inlinePreedit = (NSApp.squirrelAppDelegate.panel.inlinePreedit &&
+                        !rime_get_api()->get_option(_session, "no_inline")) ||
+      rime_get_api()->get_option(_session, "inline");
       // if not inline, embed soft cursor in preedit string
       rime_get_api()->set_option(_session, "soft_cursor", !_inlinePreedit);
     }

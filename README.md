@@ -28,7 +28,7 @@
 安裝輸入法
 ---
 
-本品適用於 64 位 macOS 10.7+
+本品適用於 macOS 10.9+
 
 初次安裝，如果在部份應用程序中打不出字，請註銷並重新登錄。
 
@@ -82,6 +82,7 @@
 本品引用了以下開源軟件：
 
   * Boost C++ Libraries  (Boost Software License)
+  * capnproto (MIT License)
   * darts-clone  (New BSD License)
   * google-glog  (New BSD License)
   * Google Test  (New BSD License)

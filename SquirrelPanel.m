@@ -2,10 +2,166 @@
 
 #import "SquirrelConfig.h"
 
-static const int kOffsetHeight = 5;
-static const int kDefaultFontSize = 24;
+static const CGFloat kOffsetHeight = 5;
+static const CGFloat kDefaultFontSize = 24;
+static const CGFloat kBlendedBackgroundColorFraction = 1.0 / 5;
 static const NSTimeInterval kShowStatusDuration = 1.2;
 static NSString *const kDefaultCandidateFormat = @"%c. %@";
+
+@interface SquirrelTheme : NSObject
+
+@property(nonatomic, assign) BOOL native;
+
+@property(nonatomic, strong, readonly) NSColor *backgroundColor;
+@property(nonatomic, strong, readonly) NSColor *highlightedStripColor;
+@property(nonatomic, strong, readonly) NSColor *highlightedPreeditColor;
+@property(nonatomic, strong, readonly) NSColor *preeditBackgroundColor;
+@property(nonatomic, strong, readonly) NSColor *borderColor;
+
+@property(nonatomic, readonly) CGFloat cornerRadius;
+@property(nonatomic, readonly) CGFloat hilitedCornerRadius;
+@property(nonatomic, readonly) NSSize edgeInset;
+@property(nonatomic, readonly) CGFloat borderWidth;
+@property(nonatomic, readonly) CGFloat linespace;
+@property(nonatomic, readonly) CGFloat preeditLinespace;
+@property(nonatomic, readonly) CGFloat alpha;
+@property(nonatomic, readonly) BOOL linear;
+@property(nonatomic, readonly) BOOL vertical;
+@property(nonatomic, readonly) BOOL inlinePreedit;
+
+@property(nonatomic, strong, readonly) NSDictionary *attrs;
+@property(nonatomic, strong, readonly) NSDictionary *highlightedAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *labelAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *labelHighlightedAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *commentAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *commentHighlightedAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *preeditAttrs;
+@property(nonatomic, strong, readonly) NSDictionary *preeditHighlightedAttrs;
+@property(nonatomic, strong, readonly) NSParagraphStyle *paragraphStyle;
+@property(nonatomic, strong, readonly) NSParagraphStyle *preeditParagraphStyle;
+
+@property(nonatomic, strong, readonly) NSString *prefixLabelFormat, *suffixLabelFormat;
+
+- (void)setCandidateFormat:(NSString *)candidateFormat;
+
+- (void)setBackgroundColor:(NSColor *)backgroundColor
+     highlightedStripColor:(NSColor *)highlightedStripColor
+   highlightedPreeditColor:(NSColor *)highlightedPreeditColor
+    preeditBackgroundColor:(NSColor *)preeditBackgroundColor
+               borderColor:(NSColor *)borderColor;
+
+- (void)setCornerRadius:(CGFloat)cornerRadius
+    hilitedCornerRadius:(CGFloat)hilitedCornerRadius
+              edgeInset:(NSSize)edgeInset
+            borderWidth:(CGFloat)borderWidth
+              linespace:(CGFloat)linespace
+       preeditLinespace:(CGFloat)preeditLinespace
+                  alpha:(CGFloat)alpha
+                 linear:(BOOL)linear
+               vertical:(BOOL)vertical
+          inlinePreedit:(BOOL)inlinePreedit;
+
+- (void)       setAttrs:(NSMutableDictionary *)attrs
+             labelAttrs:(NSMutableDictionary *)labelAttrs
+       highlightedAttrs:(NSMutableDictionary *)highlightedAttrs
+  labelHighlightedAttrs:(NSMutableDictionary *)labelHighlightedAttrs
+           commentAttrs:(NSMutableDictionary *)commentAttrs
+commentHighlightedAttrs:(NSMutableDictionary *)commentHighlightedAttrs
+           preeditAttrs:(NSMutableDictionary *)preeditAttrs
+preeditHighlightedAttrs:(NSMutableDictionary *)preeditHighlightedAttrs;
+
+- (void) setParagraphStyle:(NSParagraphStyle *)paragraphStyle
+     preeditParagraphStyle:(NSParagraphStyle *)preeditParagraphStyle;
+
+@end
+
+@implementation SquirrelTheme
+
+- (void)setCandidateFormat:(NSString *)candidateFormat {
+  // in the candiate format, everything other than '%@' is considered part of the label
+  NSRange candidateRange = [candidateFormat rangeOfString:@"%@"];
+  if (candidateRange.location == NSNotFound) {
+    _prefixLabelFormat = candidateFormat;
+    _suffixLabelFormat = nil;
+    return;
+  }
+  if (candidateRange.location > 0) {
+    // everything before '%@' is prefix label
+    NSRange prefixLabelRange = NSMakeRange(0, candidateRange.location);
+    _prefixLabelFormat = [candidateFormat substringWithRange:prefixLabelRange];
+  } else {
+    _prefixLabelFormat = nil;
+  }
+  if (NSMaxRange(candidateRange) < candidateFormat.length) {
+    // everything after '%@' is suffix label
+    NSRange suffixLabelRange = NSMakeRange(NSMaxRange(candidateRange),
+                                           candidateFormat.length - NSMaxRange(candidateRange));
+    _suffixLabelFormat = [candidateFormat substringWithRange:suffixLabelRange];
+  } else {
+    // '%@' is at the end, so suffix label does not exist
+    _suffixLabelFormat = nil;
+  }
+}
+
+- (void)setBackgroundColor:(NSColor *)backgroundColor
+     highlightedStripColor:(NSColor *)highlightedStripColor
+   highlightedPreeditColor:(NSColor *)highlightedPreeditColor
+    preeditBackgroundColor:(NSColor *)preeditBackgroundColor
+               borderColor:(NSColor *)borderColor {
+  _backgroundColor = backgroundColor;
+  _highlightedStripColor = highlightedStripColor;
+  _highlightedPreeditColor = highlightedPreeditColor;
+  _preeditBackgroundColor = preeditBackgroundColor;
+  _borderColor = borderColor;
+}
+
+- (void)setCornerRadius:(double)cornerRadius
+    hilitedCornerRadius:(double)hilitedCornerRadius
+              edgeInset:(NSSize)edgeInset
+            borderWidth:(double)borderWidth
+              linespace:(double)linespace
+       preeditLinespace:(double)preeditLinespace
+                  alpha:(CGFloat)alpha
+                 linear:(BOOL)linear
+               vertical:(BOOL)vertical
+          inlinePreedit:(BOOL)inlinePreedit {
+  _cornerRadius = cornerRadius;
+  _hilitedCornerRadius = hilitedCornerRadius;
+  _edgeInset = edgeInset;
+  _borderWidth = borderWidth;
+  _linespace = linespace;
+  _alpha = alpha;
+  _preeditLinespace = preeditLinespace;
+  _linear = linear;
+  _vertical = vertical;
+  _inlinePreedit = inlinePreedit;
+}
+
+- (void)       setAttrs:(NSMutableDictionary *)attrs
+             labelAttrs:(NSMutableDictionary *)labelAttrs
+       highlightedAttrs:(NSMutableDictionary *)highlightedAttrs
+  labelHighlightedAttrs:(NSMutableDictionary *)labelHighlightedAttrs
+           commentAttrs:(NSMutableDictionary *)commentAttrs
+commentHighlightedAttrs:(NSMutableDictionary *)commentHighlightedAttrs
+           preeditAttrs:(NSMutableDictionary *)preeditAttrs
+preeditHighlightedAttrs:(NSMutableDictionary *)preeditHighlightedAttrs {
+  _attrs = attrs;
+  _labelAttrs = labelAttrs;
+  _highlightedAttrs = highlightedAttrs;
+  _labelHighlightedAttrs = labelHighlightedAttrs;
+  _commentAttrs = commentAttrs;
+  _commentHighlightedAttrs = commentHighlightedAttrs;
+  _preeditAttrs = preeditAttrs;
+  _preeditHighlightedAttrs = preeditHighlightedAttrs;
+}
+
+- (void) setParagraphStyle:(NSParagraphStyle *)paragraphStyle
+     preeditParagraphStyle:(NSParagraphStyle *)preeditParagraphStyle {
+  _paragraphStyle = paragraphStyle;
+  _preeditParagraphStyle = preeditParagraphStyle;
+}
+
+@end
 
 @interface SquirrelView : NSView
 
@@ -14,23 +170,9 @@ static NSString *const kDefaultCandidateFormat = @"%c. %@";
 @property(nonatomic, readonly) NSRange preeditRange;
 @property(nonatomic, readonly) NSRange highlightedPreeditRange;
 @property(nonatomic, readonly) NSRect contentRect;
+@property(nonatomic, readonly) BOOL isDark;
+@property(nonatomic, strong, readonly) SquirrelTheme *currentTheme;
 @property(nonatomic, readonly) CGFloat textFrameWidth;
-@property(nonatomic, strong, readonly) NSColor *backgroundColor;
-@property(nonatomic, strong, readonly) NSColor *highlightedStripColor;
-@property(nonatomic, strong, readonly) NSColor *highlightedPreeditColor;
-@property(nonatomic, strong, readonly) NSColor *preeditBackgroundColor;
-@property(nonatomic, strong, readonly) NSColor *borderColor;
-
-@property(nonatomic, assign) CGFloat cornerRadius;
-@property(nonatomic, assign) CGFloat hilitedCornerRadius;
-@property(nonatomic, assign) NSSize edgeInset;
-@property(nonatomic, assign) CGFloat borderWidth;
-@property(nonatomic, assign) CGFloat linespace;
-@property(nonatomic, assign) CGFloat preeditLinespace;
-@property(nonatomic, assign) BOOL linear;
-@property(nonatomic, assign) BOOL vertical;
-@property(nonatomic, assign) BOOL inlinePreedit;
-
 @property(nonatomic, assign) CGFloat seperatorWidth;
 
 - (BOOL)isFlipped;
@@ -39,28 +181,33 @@ static NSString *const kDefaultCandidateFormat = @"%c. %@";
         preeditRange:(NSRange)preeditRange
   highlightedPreeditRange:(NSRange)highlightedPreeditRange;
 - (NSRect)contentRectForRange:(NSRange)range;
-- (void)setBackgroundColor:(NSColor *)backgroundColor
-     highlightedStripColor:(NSColor *)highlightedStripColor
-   highlightedPreeditColor:(NSColor *)highlightedPreeditColor
-    preeditBackgroundColor:(NSColor *)preeditBackgroundColor
-               borderColor:(NSColor *)borderColor;
-- (void)setCornerRadius:(double)cornerRadius
-hilitedCornerRadius:(double)hilitedCornerRadius
-          edgeInset:(NSSize)edgeInset
-        borderWidth:(double)borderWidth
-          linespace:(double)linespace
-   preeditLinespace:(double)preeditLinespace
-         linear:(BOOL)linear
-           vertical:(BOOL)vertical
-      inlinePreedit:(BOOL)inlinePreedit;
-
 @end
 
 @implementation SquirrelView
 
+SquirrelTheme *_defaultTheme;
+SquirrelTheme *_darkTheme;
+
 // Need flipped coordinate system, as required by textStorage
 - (BOOL)isFlipped {
   return YES;
+}
+
+- (BOOL)isDark {
+  if (@available(macOS 10.14, *)) {
+    if ([NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] == NSAppearanceNameDarkAqua) {
+      return YES;
+    }
+  }
+  return NO;
+}
+
+- (SquirrelTheme *)selectTheme:(BOOL)isDark {
+  return isDark ? _darkTheme : _defaultTheme;
+}
+
+- (SquirrelTheme *)currentTheme {
+  return [self selectTheme:self.isDark];
 }
 
 - (instancetype)initWithFrame:(NSRect)frameRect {
@@ -76,6 +223,10 @@ hilitedCornerRadius:(double)hilitedCornerRadius
   _text = [[NSTextStorage alloc] init];
   [_text addLayoutManager:layoutManager];
   layoutManager.backgroundLayoutEnabled = YES;
+  _defaultTheme = [[SquirrelTheme alloc] init];
+  if (@available(macOS 10.14, *)) {
+    _darkTheme = [[SquirrelTheme alloc] init];
+  }
   return self;
 }
 
@@ -115,80 +266,6 @@ hilitedCornerRadius:(double)hilitedCornerRadius
   self.needsDisplay = YES;
 }
 
-- (void)setBackgroundColor:(NSColor *)backgroundColor
-     highlightedStripColor:(NSColor *)highlightedStripColor
-   highlightedPreeditColor:(NSColor *)highlightedPreeditColor
-    preeditBackgroundColor:(NSColor *)preeditBackgroundColor
-               borderColor:(NSColor *)borderColor {
-  _backgroundColor = backgroundColor;
-  _highlightedStripColor = highlightedStripColor;
-  _highlightedPreeditColor = highlightedPreeditColor;
-  _preeditBackgroundColor = preeditBackgroundColor;
-  _borderColor = borderColor;
-}
-
-- (void)setCornerRadius:(double)cornerRadius
-    hilitedCornerRadius:(double)hilitedCornerRadius
-              edgeInset:(NSSize)edgeInset
-            borderWidth:(double)borderWidth
-              linespace:(double)linespace
-       preeditLinespace:(double)preeditLinespace
-                 linear:(BOOL)linear
-               vertical:(BOOL)vertical
-          inlinePreedit:(BOOL)inlinePreedit {
-  _cornerRadius = cornerRadius;
-  _hilitedCornerRadius = hilitedCornerRadius;
-  _edgeInset = edgeInset;
-  _borderWidth = borderWidth;
-  _linespace = linespace;
-  _preeditLinespace = preeditLinespace;
-  _linear = linear;
-  _vertical = vertical;
-  _inlinePreedit = inlinePreedit;
-}
-
-// If an edge is close to border, will use border instead. To fix rounding errors
-void checkBorders(NSRect *rect, NSRect boundary) {
-  const CGFloat ROUND_UP = 1.0;
-  double diff;
-  if (NSMinX(*rect) - ROUND_UP < NSMinX(boundary)) {
-    diff = NSMinX(*rect) - NSMinX(boundary);
-    rect->origin.x -= diff;
-    rect->size.width += diff;
-  }
-  if (NSMaxX(*rect) + ROUND_UP > NSMaxX(boundary)) {
-    diff = NSMaxX(boundary) - NSMaxX(*rect);
-    rect->size.width += diff;
-  }
-  if (NSMinY(*rect) - ROUND_UP < NSMinY(boundary)) {
-    diff = NSMinY(*rect) - NSMinY(boundary);
-    rect->origin.y -= diff;
-    rect->size.height += diff;
-  }
-  if (NSMaxY(*rect) + ROUND_UP > NSMaxY(boundary)) {
-    diff = NSMaxY(boundary) - NSMaxY(*rect);
-    rect->size.height += diff;
-  }
-}
-
-void makeRoomForConer(NSRect *rect, NSRect boundary, CGFloat corner) {
-  const CGFloat ROUND_UP = 1.0;
-  if (NSMinX(*rect) - ROUND_UP < NSMinX(boundary)) {
-    rect->size.width -= corner;
-    rect->origin.x += corner;
-  }
-  if (NSMaxX(*rect) + ROUND_UP > NSMaxX(boundary)) {
-    rect->size.width -= corner;
-  }
-  if (NSMinY(*rect) - ROUND_UP < NSMinY(boundary)) {
-    rect->size.height -= corner;
-    rect->origin.y += corner;
-  }
-  if (NSMaxY(*rect) + ROUND_UP > NSMaxY(boundary)) {
-    rect->size.height -= corner;
-  }
-}
-
 // A tweaked sign function, to winddown corner radius when the size is small
 double sign(double number) {
   if (number >= 2) {
@@ -203,6 +280,8 @@ double sign(double number) {
 // Bezier cubic curve, which has continuous roundness
 NSBezierPath *drawSmoothLines(NSArray<NSValue *> *vertex, CGFloat alpha, CGFloat beta) {
   NSBezierPath *path = [NSBezierPath bezierPath];
+  if (vertex.count < 1)
+    return path;
   NSPoint previousPoint = [vertex[vertex.count-1] pointValue];
   NSPoint point = [vertex[0] pointValue];
   NSPoint nextPoint;
@@ -254,6 +333,15 @@ NSArray<NSValue *> *rectVertex(NSRect rect) {
     @(NSMakePoint(rect.origin.x+rect.size.width, rect.origin.y+rect.size.height)),
     @(NSMakePoint(rect.origin.x+rect.size.width, rect.origin.y))
   ];
+}
+
+void xyTranslation(NSMutableArray<NSValue *> *shape, NSPoint direction) {
+  for (NSUInteger i = 0; i < shape.count; i += 1) {
+    NSPoint point = [shape[i] pointValue];
+    point.x += direction.x;
+    point.y += direction.y;
+    [shape replaceObjectAtIndex:i withObject:@(point)];
+  }
 }
 
 BOOL nearEmptyRect(NSRect rect) {
@@ -314,12 +402,13 @@ BOOL nearEmptyRect(NSRect rect) {
       *bodyRect = lastLineRect;
     }
   }
-  leadingRect->origin.x += _edgeInset.width;
-  leadingRect->origin.y += _edgeInset.height;
-  bodyRect->origin.x += _edgeInset.width;
-  bodyRect->origin.y += _edgeInset.height;
-  trailingRect->origin.x += _edgeInset.width;
-  trailingRect->origin.y += _edgeInset.height;
+  NSSize edgeInset = self.currentTheme.edgeInset;
+  leadingRect->origin.x += edgeInset.width;
+  leadingRect->origin.y += edgeInset.height;
+  bodyRect->origin.x += edgeInset.width;
+  bodyRect->origin.y += edgeInset.height;
+  trailingRect->origin.x += edgeInset.width;
+  trailingRect->origin.y += edgeInset.height;
 }
 
 // Based on the 3 boxes from multilineRectForRange, calculate the vertex of the polygon containing the text in range
@@ -399,66 +488,59 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
   NSBezierPath *highlightedPreeditPath;
   NSBezierPath *highlightedPreeditPath2;
   NSBezierPath *preeditPath;
-  NSColor *borderColor = _borderColor;
-  CGFloat halfLinespace = _linespace / 2;
+  SquirrelTheme * theme = self.currentTheme;
 
   NSRect textField = dirtyRect;
-  textField.origin.y += _edgeInset.height;
-  textField.origin.x += _edgeInset.width;
-  
+  textField.origin.y += theme.edgeInset.height;
+  textField.origin.x += theme.edgeInset.width;
+
   // Draw preedit Rect
   NSRect backgroundRect = dirtyRect;
-  
+
   // Draw preedit Rect
   NSRect preeditRect = NSZeroRect;
   if (_preeditRange.length > 0) {
     preeditRect = [self contentRectForRange:_preeditRange];
     preeditRect.size.width = textField.size.width;
-    preeditRect.size.height += _preeditLinespace;
-    preeditRect.origin = NSMakePoint(textField.origin.x - _edgeInset.width, textField.origin.y - _edgeInset.height);
-    preeditRect.size.height += _edgeInset.height;
-    if (_highlightedRange.location - (_preeditRange.location+_preeditRange.length) <= 1) {
-      if (_preeditRange.length > 0 && !_linear) {
-        preeditRect.size.height -= _hilitedCornerRadius / 2;
-      }
-    }
+    preeditRect.size.height += theme.edgeInset.height + theme.preeditLinespace / 2 + theme.hilitedCornerRadius / 2;
+    preeditRect.origin = NSMakePoint(textField.origin.x - theme.edgeInset.width, textField.origin.y - theme.edgeInset.height);
     if (_highlightedRange.length == 0) {
-      preeditRect.size.height += _edgeInset.height - _preeditLinespace;
+      preeditRect.size.height += theme.edgeInset.height - theme.preeditLinespace / 2;
     }
-    checkBorders(&preeditRect, backgroundRect);
-    if (_preeditBackgroundColor != nil) {
+    if (theme.preeditBackgroundColor != nil) {
       preeditPath = drawSmoothLines(rectVertex(preeditRect), 0, 0);
     }
   }
-  
+
   // Draw highlighted Rect
-  if (_highlightedRange.length > 0 && _highlightedStripColor != nil) {
-    if (_linear){
+  if (_highlightedRange.length > 0 && theme.highlightedStripColor != nil) {
+    NSRect innerBox = backgroundRect;
+    innerBox.size.width -= (theme.edgeInset.width + 1 + textFrameWidth) * 2;
+    innerBox.origin.x += theme.edgeInset.width + 1 + textFrameWidth;
+    if (_preeditRange.length == 0) {
+      innerBox.origin.y += theme.edgeInset.height + 1;
+      innerBox.size.height -= (theme.edgeInset.height + 1) * 2;
+    } else {
+      innerBox.origin.y += preeditRect.size.height + theme.preeditLinespace / 2 + theme.hilitedCornerRadius / 2 + 1;
+      innerBox.size.height -= theme.edgeInset.height + preeditRect.size.height + theme.preeditLinespace / 2 + theme.hilitedCornerRadius / 2 + 2;
+    }
+    NSRect outerBox = backgroundRect;
+    outerBox.size.height -= theme.hilitedCornerRadius + preeditRect.size.height;
+    outerBox.size.width -= theme.hilitedCornerRadius;
+    outerBox.origin.x += theme.hilitedCornerRadius / 2;
+    outerBox.origin.y += theme.hilitedCornerRadius / 2 + preeditRect.size.height;
+
+    CGFloat halfLinespace = theme.linespace / 2;
+    if (theme.linear){
       NSRect leadingRect;
       NSRect bodyRect;
       NSRect trailingRect;
       [self multilineRectForRange:_highlightedRange leadingRect:&leadingRect bodyRect:&bodyRect trailingRect:&trailingRect];
-      
+
       [self addGapBetweenHorizontalCandidates:&leadingRect];
       [self addGapBetweenHorizontalCandidates:&bodyRect];
       [self addGapBetweenHorizontalCandidates:&trailingRect];
-      
-      NSRect innerBox = backgroundRect;
-      innerBox.size.width -= (_edgeInset.width + 1 + textFrameWidth) * 2;
-      innerBox.origin.x += _edgeInset.width + 1 + textFrameWidth;
-      if (_preeditRange.length == 0) {
-        innerBox.origin.y += _edgeInset.height + 1;
-        innerBox.size.height -= (_edgeInset.height + 1) * 2;
-      } else {
-        innerBox.origin.y += preeditRect.size.height + halfLinespace + 1;
-        innerBox.size.height -= _edgeInset.height + preeditRect.size.height + halfLinespace + 2;
-      }
-      NSRect outerBox = backgroundRect;
-      outerBox.size.height -= _hilitedCornerRadius + preeditRect.size.height;
-      outerBox.size.width -= _hilitedCornerRadius;
-      outerBox.origin.x += _hilitedCornerRadius / 2;
-      outerBox.origin.y += _hilitedCornerRadius / 2 + preeditRect.size.height;
-      
+
       NSMutableArray<NSValue *> *highlightedPoints;
       NSMutableArray<NSValue *> *highlightedPoints2;
       // Handles the special case where containing boxes are separated
@@ -468,67 +550,63 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
       } else {
         highlightedPoints = [multilineRectVertex(leadingRect, bodyRect, trailingRect) mutableCopy];
       }
+
+      xyTranslation(highlightedPoints, NSMakePoint(0, -halfLinespace));
+      xyTranslation(highlightedPoints2, NSMakePoint(0, -halfLinespace));
+      innerBox.size.height -= halfLinespace;
       // Expand the boxes to reach proper border
       expand(highlightedPoints, innerBox, outerBox);
       expand(highlightedPoints2, innerBox, outerBox);
-      highlightedPath = drawSmoothLines(highlightedPoints, 0.3*_hilitedCornerRadius, 1.4*_hilitedCornerRadius);
+      highlightedPath = drawSmoothLines(highlightedPoints, 0.3*theme.hilitedCornerRadius, 1.4*theme.hilitedCornerRadius);
       if (highlightedPoints2.count > 0) {
-        highlightedPath2 = drawSmoothLines(highlightedPoints2, 0.3*_hilitedCornerRadius, 1.4*_hilitedCornerRadius);
+        highlightedPath2 = drawSmoothLines(highlightedPoints2, 0.3*theme.hilitedCornerRadius, 1.4*theme.hilitedCornerRadius);
       }
     } else {
       NSRect highlightedRect = [self contentRectForRange:_highlightedRange];
       highlightedRect.size.width = textField.size.width;
-      highlightedRect.size.height += _linespace;
-      highlightedRect.origin = NSMakePoint(textField.origin.x - _edgeInset.width, highlightedRect.origin.y + _edgeInset.height - halfLinespace);
+      highlightedRect.size.height += theme.linespace;
+      highlightedRect.origin = NSMakePoint(textField.origin.x - theme.edgeInset.width,
+                                           highlightedRect.origin.y + theme.edgeInset.height - halfLinespace);
       if (_highlightedRange.location+_highlightedRange.length == _text.length) {
-        highlightedRect.size.height += _edgeInset.height - halfLinespace;
+        highlightedRect.size.height += theme.edgeInset.height - halfLinespace;
       }
       if (_highlightedRange.location - ((_preeditRange.location == NSNotFound ? 0 : _preeditRange.location)+_preeditRange.length) <= 1) {
         if (_preeditRange.length == 0) {
-          highlightedRect.size.height += _edgeInset.height - halfLinespace;
-          highlightedRect.origin.y -= _edgeInset.height - halfLinespace;
+          highlightedRect.size.height += theme.edgeInset.height - halfLinespace;
+          highlightedRect.origin.y -= theme.edgeInset.height - halfLinespace;
         } else {
-          highlightedRect.size.height += _hilitedCornerRadius / 2;
-          highlightedRect.origin.y -= _hilitedCornerRadius / 2;
+          highlightedRect.size.height += theme.hilitedCornerRadius / 2;
+          highlightedRect.origin.y -= theme.hilitedCornerRadius / 2;
         }
       }
-      if (_hilitedCornerRadius == 0) {
-        // fill in small gaps between highlighted rect and the bounding rect.
-        checkBorders(&highlightedRect, backgroundRect);
-      } else {
-        // leave a small gap between highlighted rect and the bounding rect
-        NSRect candidateRect = backgroundRect;
-        candidateRect.size.height -= preeditRect.size.height;
-        candidateRect.origin.y += preeditRect.size.height;
-        makeRoomForConer(&highlightedRect, candidateRect, _hilitedCornerRadius / 2);
-
-      }
-      highlightedPath = drawSmoothLines(rectVertex(highlightedRect), _hilitedCornerRadius*0.3, _hilitedCornerRadius*1.4);
+      NSMutableArray<NSValue *> *highlightedPoints = [rectVertex(highlightedRect) mutableCopy];
+      expand(highlightedPoints, innerBox, outerBox);
+      highlightedPath = drawSmoothLines(highlightedPoints, theme.hilitedCornerRadius*0.3, theme.hilitedCornerRadius*1.4);
     }
   }
-  
+
   // Draw highlighted part of preedit text
-  if (_highlightedPreeditRange.length > 0 && _highlightedPreeditColor != nil) {
+  if (_highlightedPreeditRange.length > 0 && theme.highlightedPreeditColor != nil) {
     NSRect leadingRect;
     NSRect bodyRect;
     NSRect trailingRect;
     [self multilineRectForRange:_highlightedPreeditRange leadingRect:&leadingRect bodyRect:&bodyRect trailingRect:&trailingRect];
 
     NSRect innerBox = preeditRect;
-    innerBox.size.width -= (_edgeInset.width + 1 + textFrameWidth) * 2;
-    innerBox.origin.x += _edgeInset.width + 1 + textFrameWidth;
-    innerBox.origin.y += _edgeInset.height + 1;
+    innerBox.size.width -= (theme.edgeInset.width + 1 + textFrameWidth) * 2;
+    innerBox.origin.x += theme.edgeInset.width + 1 + textFrameWidth;
+    innerBox.origin.y += theme.edgeInset.height + 1;
     if (_highlightedRange.length == 0) {
-      innerBox.size.height -= (_edgeInset.height + 1) * 2;
+      innerBox.size.height -= (theme.edgeInset.height + 1) * 2;
     } else {
-      innerBox.size.height -= _edgeInset.height+_preeditLinespace + 2;
+      innerBox.size.height -= theme.edgeInset.height + theme.preeditLinespace + theme.hilitedCornerRadius / 2 + 2;
     }
     NSRect outerBox = preeditRect;
-    outerBox.size.height -= _hilitedCornerRadius;
-    outerBox.size.width -= _hilitedCornerRadius;
-    outerBox.origin.x += _hilitedCornerRadius / 2;
-    outerBox.origin.y += _hilitedCornerRadius / 2;
-    
+    outerBox.size.height -= theme.hilitedCornerRadius;
+    outerBox.size.width -= theme.hilitedCornerRadius;
+    outerBox.origin.x += theme.hilitedCornerRadius / 2;
+    outerBox.origin.y += theme.hilitedCornerRadius / 2;
+
     NSMutableArray<NSValue *> *highlightedPreeditPoints;
     NSMutableArray<NSValue *> *highlightedPreeditPoints2;
     // Handles the special case where containing boxes are separated
@@ -541,18 +619,18 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
     // Expand the boxes to reach proper border
     expand(highlightedPreeditPoints, innerBox, outerBox);
     expand(highlightedPreeditPoints2, innerBox, outerBox);
-    highlightedPreeditPath = drawSmoothLines(highlightedPreeditPoints, 0.3*_hilitedCornerRadius, 1.4*_hilitedCornerRadius);
+    highlightedPreeditPath = drawSmoothLines(highlightedPreeditPoints, 0.3*theme.hilitedCornerRadius, 1.4*theme.hilitedCornerRadius);
     if (highlightedPreeditPoints2.count > 0) {
-      highlightedPreeditPath2 = drawSmoothLines(highlightedPreeditPoints2, 0.3*_hilitedCornerRadius, 1.4*_hilitedCornerRadius);
+      highlightedPreeditPath2 = drawSmoothLines(highlightedPreeditPoints2, 0.3*theme.hilitedCornerRadius, 1.4*theme.hilitedCornerRadius);
     }
   }
 
   [NSBezierPath setDefaultLineWidth:0];
-  backgroundPath = drawSmoothLines(rectVertex(backgroundRect), _cornerRadius*0.3, _cornerRadius*1.4);
+  backgroundPath = drawSmoothLines(rectVertex(backgroundRect), theme.cornerRadius*0.3, theme.cornerRadius*1.4);
   // Nothing should extend beyond backgroundPath
   borderPath = [backgroundPath copy];
   [borderPath addClip];
-  borderPath.lineWidth = _borderWidth;
+  borderPath.lineWidth = theme.borderWidth;
 
 // This block of code enables independent transparencies in highlighted colour and background colour.
 // Disabled because of the flaw: edges or rounded corners of the heighlighted area are rendered with undesirable shadows.
@@ -564,11 +642,11 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
       [backgroundPath appendBezierPath:[highlightedPath2 copy]];
     }
   }
-  
+
   if (![preeditPath isEmpty]) {
     [backgroundPath appendBezierPath:[preeditPath copy]];
   }
-  
+
   if (![highlightedPreeditPath isEmpty]) {
     if (preeditPath != nil) {
       [preeditPath appendBezierPath:[highlightedPreeditPath copy]];
@@ -587,29 +665,29 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
   [preeditPath setWindingRule:NSEvenOddWindingRule];
 #endif
 
-  [_backgroundColor setFill];
+  [theme.backgroundColor setFill];
   [backgroundPath fill];
-  if (_preeditBackgroundColor && ![preeditPath isEmpty]) {
-    [_preeditBackgroundColor setFill];
+  if (theme.preeditBackgroundColor && ![preeditPath isEmpty]) {
+    [theme.preeditBackgroundColor setFill];
     [preeditPath fill];
   }
-  if (_highlightedStripColor && ![highlightedPath isEmpty]) {
-    [_highlightedStripColor setFill];
+  if (theme.highlightedStripColor && ![highlightedPath isEmpty]) {
+    [theme.highlightedStripColor setFill];
     [highlightedPath fill];
     if (![highlightedPath2 isEmpty]) {
       [highlightedPath2 fill];
     }
   }
-  if (_highlightedPreeditColor && ![highlightedPreeditPath isEmpty]) {
-    [_highlightedPreeditColor setFill];
+  if (theme.highlightedPreeditColor && ![highlightedPreeditPath isEmpty]) {
+    [theme.highlightedPreeditColor setFill];
     [highlightedPreeditPath fill];
     if (![highlightedPreeditPath2 isEmpty]) {
       [highlightedPreeditPath2 fill];
     }
   }
 
-  if (borderColor) {
-    [borderColor setStroke];
+  if (theme.borderColor && (theme.borderWidth > 0)) {
+    [theme.borderColor setStroke];
     [borderPath stroke];
   }
   NSRange glyphRange = [_text.layoutManagers[0] glyphRangeForTextContainer:_text.layoutManagers[0].textContainers[0]];
@@ -619,22 +697,8 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
 @end
 
 @implementation SquirrelPanel {
-  NSWindow *_window;
   SquirrelView *_view;
 
-  NSString *_candidateFormat;
-  NSMutableDictionary *_attrs;
-  NSMutableDictionary *_highlightedAttrs;
-  NSMutableDictionary *_labelAttrs;
-  NSMutableDictionary *_labelHighlightedAttrs;
-  NSMutableDictionary *_commentAttrs;
-  NSMutableDictionary *_commentHighlightedAttrs;
-  NSMutableDictionary *_preeditAttrs;
-  NSMutableDictionary *_preeditHighlightedAttrs;
-  NSParagraphStyle *_paragraphStyle;
-  NSParagraphStyle *_preeditParagraphStyle;
-  CGFloat _alphaValue;
-  
   NSRange _preeditRange;
   NSRect _screenRect;
   CGFloat _maxHeight;
@@ -643,9 +707,21 @@ void expand(NSMutableArray<NSValue *> *vertex, NSRect innerBorder, NSRect outerB
   NSTimer *_statusTimer;
 }
 
+- (BOOL)linear {
+  return _view.currentTheme.linear;
+}
+
+- (BOOL)vertical {
+  return _view.currentTheme.vertical;
+}
+
+- (BOOL)inlinePreedit {
+  return _view.currentTheme.inlinePreedit;
+}
+
 CGFloat minimumHeight(NSDictionary *attribute) {
   const NSAttributedString *spaceChar = [[NSAttributedString alloc] initWithString:@" " attributes:attribute];
-  const CGFloat minimumHeight = [spaceChar boundingRectWithSize:NSZeroSize options:NULL].size.height;
+  const CGFloat minimumHeight = [spaceChar boundingRectWithSize:NSZeroSize options:0].size.height;
   return minimumHeight;
 }
 
@@ -657,21 +733,21 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
   // Use the width of the character to determin if they should be upright in vertical writing mode.
   // Adjust font base line for better alignment.
   const NSAttributedString *cjkChar = [[NSAttributedString alloc] initWithString:@"字" attributes:attribute];
-  const NSRect cjkRect = [cjkChar boundingRectWithSize:NSZeroSize options:NULL];
+  const NSRect cjkRect = [cjkChar boundingRectWithSize:NSZeroSize options:0];
   const NSAttributedString *hangulChar = [[NSAttributedString alloc] initWithString:@"글" attributes:attribute];
-  const NSSize hangulSize = [hangulChar boundingRectWithSize:NSZeroSize options:NULL].size;
+  const NSSize hangulSize = [hangulChar boundingRectWithSize:NSZeroSize options:0].size;
   stringRange = [originalText.string rangeOfComposedCharacterSequencesForRange:stringRange];
   NSUInteger i = stringRange.location;
   while (i < stringRange.location+stringRange.length) {
     NSRange range = [originalText.string rangeOfComposedCharacterSequenceAtIndex:i];
     i = range.location + range.length;
-    NSRect charRect = [[originalText attributedSubstringFromRange:range] boundingRectWithSize:NSZeroSize options:NULL];
+    NSRect charRect = [[originalText attributedSubstringFromRange:range] boundingRectWithSize:NSZeroSize options:0];
     // Also adjust the baseline so upright and lying charcters are properly aligned
     if ((charRect.size.width >= cjkRect.size.width) || (charRect.size.width >= hangulSize.width)) {
       [originalText addAttribute:NSVerticalGlyphFormAttributeName value:@(1) range:range];
-      NSRect uprightCharRect = [[originalText attributedSubstringFromRange:range] boundingRectWithSize:NSZeroSize options:NULL];
+      NSRect uprightCharRect = [[originalText attributedSubstringFromRange:range] boundingRectWithSize:NSZeroSize options:0];
       CGFloat widthDiff = charRect.size.width-cjkChar.size.width;
-      CGFloat offset = (cjkRect.size.height - uprightCharRect.size.height)/2 + (cjkRect.origin.y-uprightCharRect.origin.y) - (widthDiff>0 ? widthDiff/1.2 : widthDiff/2) +baseOffset;
+      CGFloat offset = (cjkRect.size.height - uprightCharRect.size.height)/2 + (cjkRect.origin.y-uprightCharRect.origin.y) - (widthDiff>0 ? widthDiff/3 : widthDiff/2) +baseOffset;
       [originalText addAttribute:NSBaselineOffsetAttributeName value:@(offset) range:range];
     } else {
       [originalText addAttribute:NSBaselineOffsetAttributeName value:@(baseOffset) range:range];
@@ -679,56 +755,94 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
   }
 }
 
-- (void)initializeUIStyle {
-  _candidateFormat = kDefaultCandidateFormat;
-  {
-    _attrs = [[NSMutableDictionary alloc] init];
-    _attrs[NSForegroundColorAttributeName] = [NSColor controlTextColor];
-    _attrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
-
-    _highlightedAttrs = [[NSMutableDictionary alloc] init];
-    _highlightedAttrs[NSForegroundColorAttributeName] = [NSColor selectedControlTextColor];
-    _highlightedAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
-
-    _labelAttrs = [_attrs mutableCopy];
-    _labelHighlightedAttrs = [_highlightedAttrs mutableCopy];
-
-    _commentAttrs = [[NSMutableDictionary alloc] init];
-    _commentAttrs[NSForegroundColorAttributeName] = [NSColor disabledControlTextColor];
-    _commentAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
-
-    _commentHighlightedAttrs = [_commentAttrs mutableCopy];
-
-    _preeditAttrs = [[NSMutableDictionary alloc] init];
-    _preeditAttrs[NSForegroundColorAttributeName] = [NSColor disabledControlTextColor];
-    _preeditAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
-
-    _preeditHighlightedAttrs = [[NSMutableDictionary alloc] init];
-    _preeditHighlightedAttrs[NSForegroundColorAttributeName] = [NSColor controlTextColor];
-    _preeditHighlightedAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
-
-    _preeditParagraphStyle = [NSParagraphStyle defaultParagraphStyle];
-    _preeditParagraphStyle = [NSParagraphStyle defaultParagraphStyle];
+void changeEmojiSize(NSMutableAttributedString *text, CGFloat emojiFontSize) {
+  [text fixFontAttributeInRange:NSMakeRange(0, text.length)];
+  NSFont *emojiFont = [NSFont fontWithName:@"AppleColorEmoji" size:emojiFontSize];
+  NSRange currentFontRange = NSMakeRange(NSNotFound, 0);
+  long i = 0;
+  while (i < text.length) {
+    NSFont *charFont = [text attributesAtIndex:i effectiveRange:&currentFontRange][NSFontAttributeName];
+    if ([charFont.fontName isEqualTo: @"AppleColorEmoji"]) {
+      [text addAttributes:@{NSFontAttributeName: emojiFont} range:currentFontRange];
+    }
+    i = currentFontRange.location + currentFontRange.length;
   }
 }
 
++ (NSColor *)secondaryTextColor {
+  if(@available(macOS 10.10, *)) {
+    return [NSColor secondaryLabelColor];
+  } else {
+    return [NSColor disabledControlTextColor];
+  }
+}
+
+- (void)initializeUIStyleForDarkMode:(BOOL)isDark {
+  SquirrelTheme *theme = [_view selectTheme:isDark];
+  theme.native = YES;
+  theme.candidateFormat = kDefaultCandidateFormat;
+
+  NSColor *secondaryTextColor = [[self class] secondaryTextColor];
+
+  NSMutableDictionary *attrs = [[NSMutableDictionary alloc] init];
+  attrs[NSForegroundColorAttributeName] = [NSColor controlTextColor];
+  attrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
+
+  NSMutableDictionary *highlightedAttrs = [[NSMutableDictionary alloc] init];
+  highlightedAttrs[NSForegroundColorAttributeName] = [NSColor selectedControlTextColor];
+  highlightedAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
+
+  NSMutableDictionary *labelAttrs = [attrs mutableCopy];
+  NSMutableDictionary *labelHighlightedAttrs = [highlightedAttrs mutableCopy];
+
+  NSMutableDictionary *commentAttrs = [[NSMutableDictionary alloc] init];
+  commentAttrs[NSForegroundColorAttributeName] = secondaryTextColor;
+  commentAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
+
+  NSMutableDictionary *commentHighlightedAttrs = [commentAttrs mutableCopy];
+
+  NSMutableDictionary *preeditAttrs = [[NSMutableDictionary alloc] init];
+  preeditAttrs[NSForegroundColorAttributeName] = secondaryTextColor;
+  preeditAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
+
+  NSMutableDictionary *preeditHighlightedAttrs = [[NSMutableDictionary alloc] init];
+  preeditHighlightedAttrs[NSForegroundColorAttributeName] = [NSColor controlTextColor];
+  preeditHighlightedAttrs[NSFontAttributeName] = [NSFont userFontOfSize:kDefaultFontSize];
+
+  NSParagraphStyle *paragraphStyle = [NSParagraphStyle defaultParagraphStyle];
+  NSParagraphStyle *preeditParagraphStyle = [NSParagraphStyle defaultParagraphStyle];
+
+  [theme          setAttrs:attrs
+                labelAttrs:labelAttrs
+          highlightedAttrs:highlightedAttrs
+     labelHighlightedAttrs:labelHighlightedAttrs
+              commentAttrs:commentAttrs
+   commentHighlightedAttrs:commentHighlightedAttrs
+              preeditAttrs:preeditAttrs
+   preeditHighlightedAttrs:preeditHighlightedAttrs];
+  [theme setParagraphStyle:paragraphStyle
+     preeditParagraphStyle:preeditParagraphStyle];
+}
+
 - (instancetype)init {
-  self = [super init];
+  self = [super initWithContentRect:_position
+                          styleMask:NSWindowStyleMaskBorderless
+                            backing:NSBackingStoreBuffered
+                              defer:YES];
   if (self) {
-    _window = [[NSWindow alloc] initWithContentRect:_position
-                                          styleMask:NSWindowStyleMaskBorderless
-                                            backing:NSBackingStoreBuffered
-                                              defer:YES];
-    _window.alphaValue = 1.0;
+    self.alphaValue = 1.0;
     // _window.level = NSScreenSaverWindowLevel + 1;
     // ^ May fix visibility issue in fullscreen games.
-    _window.level = CGShieldingWindowLevel();
-    _window.hasShadow = YES;
-    _window.opaque = NO;
-    _window.backgroundColor = [NSColor clearColor];
-    _view = [[SquirrelView alloc] initWithFrame:_window.contentView.frame];
-    _window.contentView = _view;
-    [self initializeUIStyle];
+    self.level = CGShieldingWindowLevel();
+    self.hasShadow = YES;
+    self.opaque = NO;
+    self.backgroundColor = [NSColor clearColor];
+    _view = [[SquirrelView alloc] initWithFrame:self.contentView.frame];
+    self.contentView = _view;
+    [self initializeUIStyleForDarkMode:NO];
+    if (@available(macOS 10.14, *)) {
+      [self initializeUIStyleForDarkMode:YES];
+    }
     _maxHeight = 0;
   }
   return self;
@@ -738,7 +852,7 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
   // get current screen
   _screenRect = [NSScreen mainScreen].frame;
   NSArray *screens = [NSScreen screens];
-  
+
   NSUInteger i;
   for (i = 0; i < screens.count; ++i) {
     NSRect rect = [screens[i] frame];
@@ -752,22 +866,33 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
 // Get the window size, the windows will be the dirtyRect in SquirrelView.drawRect
 - (void)show {
   [self getCurrentScreen];
+  SquirrelTheme *theme = _view.currentTheme;
+
+  if (@available(macOS 10.14, *)) {
+    NSAppearance *requestedAppearance = theme.native ? nil : [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+    if (self.appearance != requestedAppearance) {
+      self.appearance = requestedAppearance;
+    }
+  }
 
   //Break line if the text is too long, based on screen size.
-  NSSize edgeInset = _view.edgeInset;
   CGFloat textWidth = _view.text.size.width + _view.textFrameWidth * 2;
-  if (_vertical && (textWidth > NSHeight(_screenRect) / 3 - edgeInset.height * 2)) {
-    textWidth = NSHeight(_screenRect) / 3 - edgeInset.height * 2;
-  } else if (!_vertical && (textWidth > NSWidth(_screenRect) / 2 - edgeInset.height * 2)) {
-    textWidth = NSWidth(_screenRect) / 2 - edgeInset.height * 2;
+  NSFont *currentFont = theme.attrs[NSFontAttributeName];
+  CGFloat fontScale = currentFont.pointSize / 12;
+  CGFloat textWidthRatio = MIN(1.0, 1.0 / (theme.vertical ? 4 : 3) + fontScale / 12);
+  CGFloat maxTextWidth = theme.vertical
+  ? NSHeight(_screenRect) * textWidthRatio - theme.edgeInset.height * 2
+  : NSWidth(_screenRect) * textWidthRatio - theme.edgeInset.width * 2;
+  if (textWidth > maxTextWidth) {
+    textWidth = maxTextWidth;
   }
   _view.text.layoutManagers[0].textContainers[0].containerSize = NSMakeSize(textWidth, 0);
-  
+
   NSRect windowRect;
   // in vertical mode, the width and height are interchanged
   NSRect contentRect = _view.contentRect;
-  if ((_vertical && NSMidY(_position) / NSHeight(_screenRect) < 0.5) ||
-      (!_vertical && NSMinX(_position)+MAX(contentRect.size.width, _maxHeight)+edgeInset.width*2 > NSMaxX(_screenRect))) {
+  if ((theme.vertical && NSMidY(_position) / NSHeight(_screenRect) < 0.5) ||
+      (!theme.vertical && NSMinX(_position)+MAX(contentRect.size.width, _maxHeight)+theme.edgeInset.width*2 > NSMaxX(_screenRect))) {
     if (contentRect.size.width >= _maxHeight) {
       _maxHeight = contentRect.size.width;
     } else {
@@ -775,10 +900,10 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
       _view.text.layoutManagers[0].textContainers[0].containerSize = NSMakeSize(_maxHeight, 0);
     }
   }
-  
-  if (_vertical) {
-    windowRect.size = NSMakeSize(contentRect.size.height + edgeInset.height * 2,
-                                 contentRect.size.width + edgeInset.width * 2);
+
+  if (theme.vertical) {
+    windowRect.size = NSMakeSize(contentRect.size.height + theme.edgeInset.height * 2,
+                                 contentRect.size.width + theme.edgeInset.width * 2);
     // To avoid jumping up and down while typing, use the lower screen when typing on upper, and vice versa
     if (NSMidY(_position) / NSHeight(_screenRect) >= 0.5) {
       windowRect.origin.y = NSMinY(_position) - kOffsetHeight - NSHeight(windowRect);
@@ -789,11 +914,11 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     windowRect.origin.x = NSMinX(_position) - windowRect.size.width - kOffsetHeight;
     if (_preeditRange.length > 0) {
       NSSize preeditSize = [_view contentRectForRange:_preeditRange].size;
-      windowRect.origin.x += preeditSize.height + edgeInset.width;
+      windowRect.origin.x += preeditSize.height + theme.edgeInset.width;
     }
   } else {
-    windowRect.size = NSMakeSize(contentRect.size.width + edgeInset.width * 2,
-                                 contentRect.size.height + edgeInset.height * 2);
+    windowRect.size = NSMakeSize(contentRect.size.width + theme.edgeInset.width * 2,
+                                 contentRect.size.height + theme.edgeInset.height * 2);
     windowRect.origin = NSMakePoint(NSMinX(_position),
                                     NSMinY(_position) - kOffsetHeight - NSHeight(windowRect));
   }
@@ -805,7 +930,7 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     windowRect.origin.x = NSMinX(_screenRect);
   }
   if (NSMinY(windowRect) < NSMinY(_screenRect)) {
-    if (_vertical) {
+    if (theme.vertical) {
       windowRect.origin.y = NSMinY(_screenRect);
     } else {
       windowRect.origin.y = NSMaxY(_position) + kOffsetHeight;
@@ -818,17 +943,17 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     windowRect.origin.y = NSMinY(_screenRect);
   }
   // rotate the view, the core in vertical mode!
-  if (_vertical) {
+  if (theme.vertical) {
     _view.boundsRotation = 90.0;
     [_view setBoundsOrigin:NSMakePoint(0, windowRect.size.width)];
   } else {
     _view.boundsRotation = 0;
     [_view setBoundsOrigin:NSMakePoint(0, 0)];
   }
-  _window.alphaValue = _alphaValue;
-  [_window setFrame:windowRect display:YES];
-  [_window invalidateShadow];
-  [_window orderFront:nil];
+  self.alphaValue = theme.alpha;
+  [self setFrame:windowRect display:YES];
+  [self invalidateShadow];
+  [self orderFront:nil];
   // voila !
 }
 
@@ -837,7 +962,7 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     [_statusTimer invalidate];
     _statusTimer = nil;
   }
-  [_window orderOut:nil];
+  [self orderOut:nil];
   _maxHeight = 0;
 }
 
@@ -866,55 +991,8 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     return;
   }
 
-  NSRange labelRange, labelRange2, pureCandidateRange;
-  NSString *labelFormat, *labelFormat2, *pureCandidateFormat;
-  {
-    // in our candiate format, everything other than '%@' is
-    // considered as a part of the label
+  SquirrelTheme *theme = _view.currentTheme;
 
-    labelRange = [_candidateFormat rangeOfString:@"%c"];
-    if (labelRange.location == NSNotFound) {
-      labelRange2 = labelRange;
-      labelFormat2 = labelFormat = nil;
-
-      pureCandidateRange = NSMakeRange(0, _candidateFormat.length);
-      pureCandidateFormat = _candidateFormat;
-    } else {
-      pureCandidateRange = [_candidateFormat rangeOfString:@"%@"];
-      if (pureCandidateRange.location == NSNotFound) {
-        // this should never happen, but just ensure that Squirrel
-        // would not crash when such edge case occurs...
-
-        labelFormat = _candidateFormat;
-
-        labelRange2 = pureCandidateRange;
-        labelFormat2 = nil;
-
-        pureCandidateFormat = @"";
-      } else {
-        if (NSMaxRange(pureCandidateRange) >= _candidateFormat.length) {
-          // '%@' is at the end, so label2 does not exist
-          labelRange2 = NSMakeRange(NSNotFound, 0);
-          labelFormat2 = nil;
-
-          // fix label1, everything other than '%@' is label1
-          labelRange.location = 0;
-          labelRange.length = pureCandidateRange.location;
-        } else {
-          labelRange = NSMakeRange(0, pureCandidateRange.location);
-          labelRange2 = NSMakeRange(NSMaxRange(pureCandidateRange),
-                                    _candidateFormat.length -
-                                        NSMaxRange(pureCandidateRange));
-
-          labelFormat2 = [_candidateFormat substringWithRange:labelRange2];
-        }
-
-        pureCandidateFormat = @"%@";
-        labelFormat = [_candidateFormat substringWithRange:labelRange];
-      }
-    }
-  }
-  
   NSMutableAttributedString *text = [[NSMutableAttributedString alloc] init];
   NSUInteger candidateStartPos = 0;
   _preeditRange = NSMakeRange(NSNotFound, 0);
@@ -926,14 +1004,14 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
       [line appendAttributedString:
                 [[NSAttributedString alloc]
                  initWithString:[preedit substringToIndex:selRange.location].precomposedStringWithCanonicalMapping
-                        attributes:_preeditAttrs]];
+                 attributes:theme.preeditAttrs]];
     }
     if (selRange.length > 0) {
       NSUInteger highlightedPreeditStart = line.length;
       [line appendAttributedString:
                 [[NSAttributedString alloc]
                     initWithString:[preedit substringWithRange:selRange].precomposedStringWithCanonicalMapping
-                        attributes:_preeditHighlightedAttrs]];
+                 attributes:theme.preeditHighlightedAttrs]];
       highlightedPreeditRange = NSMakeRange(highlightedPreeditStart, line.length - highlightedPreeditStart);
     }
     if (selRange.location + selRange.length < preedit.length) {
@@ -942,63 +1020,65 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
               [[NSAttributedString alloc]
                   initWithString:[preedit substringFromIndex:selRange.location +
                                                              selRange.length].precomposedStringWithCanonicalMapping
-                      attributes:_preeditAttrs]];
+               attributes:theme.preeditAttrs]];
     }
     [text appendAttributedString:line];
 
-    NSMutableParagraphStyle *paragraphStylePreedit = [_preeditParagraphStyle mutableCopy];
-    if (_vertical) {
+    NSMutableParagraphStyle *paragraphStylePreedit = [theme.preeditParagraphStyle mutableCopy];
+    if (theme.vertical) {
       convertToVerticalGlyph(text, NSMakeRange(0, line.length));
-      paragraphStylePreedit.minimumLineHeight = minimumHeight(_preeditAttrs);
+      paragraphStylePreedit.minimumLineHeight = minimumHeight(theme.preeditAttrs);
     }
     [text addAttribute:NSParagraphStyleAttributeName
                  value:paragraphStylePreedit
                  range:NSMakeRange(0, text.length)];
-    
+
     _preeditRange = NSMakeRange(0, text.length);
     if (numCandidates) {
       [text appendAttributedString:[[NSAttributedString alloc]
                     initWithString:@"\n"
-                        attributes:_preeditAttrs]];
+                        attributes:theme.preeditAttrs]];
     }
     candidateStartPos = text.length;
   }
-  
+
   NSRange highlightedRange = NSMakeRange(NSNotFound, 0);
   // candidates
   NSUInteger i;
   for (i = 0; i < candidates.count; ++i) {
     NSMutableAttributedString *line = [[NSMutableAttributedString alloc] init];
 
-    NSString *labelString;
-    if (labels.count > 1 && i < labels.count) {
-      labelFormat = [labelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%@"];
-      labelString = [NSString stringWithFormat:labelFormat, labels[i]].precomposedStringWithCanonicalMapping;
-    } else if (labels.count == 1 && i < [labels[0] length]) {
-      // custom: A. B. C...
-      char labelCharacter = [labels[0] characterAtIndex:i];
-      labelString = [NSString stringWithFormat:labelFormat, labelCharacter];
-    } else {
-      // default: 1. 2. 3...
-      labelFormat = [labelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%lu"];
-      labelString = [NSString stringWithFormat:labelFormat, i+1];
-    }
-
-    NSDictionary *attrs = (i == index) ? _highlightedAttrs : _attrs;
-    NSDictionary *labelAttrs = (i == index) ? _labelHighlightedAttrs : _labelAttrs;
-    NSDictionary *commentAttrs = (i == index) ? _commentHighlightedAttrs : _commentAttrs;
-
+    NSDictionary *attrs = (i == index) ? theme.highlightedAttrs : theme.attrs;
+    NSDictionary *labelAttrs =
+        (i == index) ? theme.labelHighlightedAttrs : theme.labelAttrs;
+    NSDictionary *commentAttrs =
+        (i == index) ? theme.commentHighlightedAttrs : theme.commentAttrs;
     CGFloat labelWidth = 0.0;
-    if (labelRange.location != NSNotFound) {
+
+    if (theme.prefixLabelFormat != nil) {
+      NSString *labelString;
+      if (labels.count > 1 && i < labels.count) {
+        NSString *labelFormat = [theme.prefixLabelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%@"];
+        labelString = [NSString stringWithFormat:labelFormat, labels[i]].precomposedStringWithCanonicalMapping;
+      } else if (labels.count == 1 && i < [labels[0] length]) {
+        // custom: A. B. C...
+        char labelCharacter = [labels[0] characterAtIndex:i];
+        labelString = [NSString stringWithFormat:theme.prefixLabelFormat, labelCharacter];
+      } else {
+        // default: 1. 2. 3...
+        NSString *labelFormat = [theme.prefixLabelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%lu"];
+        labelString = [NSString stringWithFormat:labelFormat, i+1];
+      }
+
       [line appendAttributedString:
                 [[NSAttributedString alloc]
                     initWithString:labelString
                         attributes:labelAttrs]];
       // get the label size for indent
-      if (_vertical) {
+      if (theme.vertical) {
         convertToVerticalGlyph(line, NSMakeRange(0, line.length));
       }
-      if (!_linear) {
+      if (!theme.linear) {
         labelWidth = [line boundingRectWithSize:NSZeroSize options:NSStringDrawingUsesLineFragmentOrigin].size.width;
       }
     }
@@ -1011,61 +1091,83 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
     // Use left-to-right marks to prevent right-to-left text from changing the
     // layout of non-candidate text.
     [line addAttribute:NSWritingDirectionAttributeName value:@[@0] range:NSMakeRange(candidateStart, line.length-candidateStart)];
+    if (theme.vertical) {
+      convertToVerticalGlyph(line, NSMakeRange(candidateStart, line.length-candidateStart));
+    }
 
-    if (labelRange2.location != NSNotFound) {
-      NSString *labelString2;
+    if (theme.suffixLabelFormat != nil) {
+      NSString *labelString;
       if (labels.count > 1 && i < labels.count) {
-        labelFormat2 = [labelFormat2 stringByReplacingOccurrencesOfString:@"%c" withString:@"%@"];
-        labelString2 = [NSString stringWithFormat:labelFormat2, labels[i]].precomposedStringWithCanonicalMapping;
+        NSString *labelFormat = [theme.suffixLabelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%@"];
+        labelString = [NSString stringWithFormat:labelFormat, labels[i]].precomposedStringWithCanonicalMapping;
       } else if (labels.count == 1 && i < [labels[0] length]) {
         // custom: A. B. C...
         char labelCharacter = [labels[0] characterAtIndex:i];
-        labelString2 = [NSString stringWithFormat:labelFormat2, labelCharacter];
+        labelString = [NSString stringWithFormat:theme.suffixLabelFormat, labelCharacter];
       } else {
         // default: 1. 2. 3...
-        labelFormat2 = [labelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%lu"];
-        labelString2 = [NSString stringWithFormat:labelFormat, i+1];
+        NSString *labelFormat = [theme.suffixLabelFormat stringByReplacingOccurrencesOfString:@"%c" withString:@"%lu"];
+        labelString = [NSString stringWithFormat:labelFormat, i+1];
       }
+      NSUInteger suffixLabelStart = line.length;
       [line appendAttributedString:
                 [[NSAttributedString alloc]
-                    initWithString:labelString2
+                    initWithString:labelString
                         attributes:labelAttrs]];
+      if (theme.vertical) {
+        convertToVerticalGlyph(line, NSMakeRange(suffixLabelStart, line.length-suffixLabelStart));
+      }
     }
 
     if (i < comments.count && [comments[i] length] != 0) {
+      NSUInteger commentStart = line.length;
       [line appendAttributedString:[[NSAttributedString alloc]
                                        initWithString:@" "
-                                           attributes:attrs]];
+                                           attributes:commentAttrs]];
       NSString *comment = comments[i];
       [line appendAttributedString:[[NSAttributedString alloc]
                                        initWithString:comment.precomposedStringWithCanonicalMapping
                                            attributes:commentAttrs]];
-    }
-    
-    
-    NSAttributedString *separator = [[NSMutableAttributedString alloc]
-                                        initWithString:(_linear ? @"  " : @"\n")
-                                            attributes:attrs];
-    _view.seperatorWidth = [separator boundingRectWithSize:NSZeroSize options:NULL].size.width;
-    if (i > 0) {
-      [text appendAttributedString:separator];
+      if (theme.vertical) {
+        convertToVerticalGlyph(line, NSMakeRange(commentStart, line.length-commentStart));
+      }
     }
 
-    NSMutableParagraphStyle *paragraphStyleCandidate = [_paragraphStyle mutableCopy];
-    if (_vertical) {
-      convertToVerticalGlyph(line, NSMakeRange(candidateStart, line.length-candidateStart));
+    NSAttributedString *separator = [[NSMutableAttributedString alloc]
+                                        initWithString:(theme.linear ? @"  " : @"\n")
+                                            attributes:attrs];
+    _view.seperatorWidth = [separator boundingRectWithSize:NSZeroSize options:0].size.width;
+
+    NSMutableParagraphStyle *paragraphStyleCandidate;
+    if (i == 0) {
+      NSMutableParagraphStyle *firstParagraphStyle = [theme.paragraphStyle mutableCopy];
+      firstParagraphStyle.paragraphSpacingBefore = theme.preeditLinespace / 2 + theme.hilitedCornerRadius / 2;
+      paragraphStyleCandidate = firstParagraphStyle;
+    } else {
+      paragraphStyleCandidate = [theme.paragraphStyle mutableCopy];
+      [text appendAttributedString:separator];
+    }
+    if (theme.linear) {
+      paragraphStyleCandidate.lineSpacing = theme.linespace;
+    }
+    if (theme.vertical) {
       paragraphStyleCandidate.minimumLineHeight = minimumHeight(attrs);
     }
     paragraphStyleCandidate.headIndent = labelWidth;
     [line addAttribute:NSParagraphStyleAttributeName
                  value:paragraphStyleCandidate
                  range:NSMakeRange(0, line.length)];
-    
+
     if (i == index) {
       highlightedRange = NSMakeRange(text.length, line.length);
     }
     [text appendAttributedString:line];
   }
+
+  // Change Emoji font size
+  NSFont *currentFont = theme.attrs[NSFontAttributeName];
+  changeEmojiSize(text, MAX(round(currentFont.pointSize * 0.8), currentFont.pointSize - 2));
+
   // text done!
   [_view setText:text];
   [_view drawViewWith:highlightedRange preeditRange:_preeditRange highlightedPreeditRange:highlightedPreeditRange];
@@ -1077,9 +1179,9 @@ void convertToVerticalGlyph(NSMutableAttributedString *originalText, NSRange str
 }
 
 - (void)showStatus:(NSString *)message {
-  NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:message
-                                                                           attributes:_commentAttrs];
-  if (_vertical) {
+  SquirrelTheme *theme = _view.currentTheme;
+  NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithString:message attributes:theme.commentAttrs];
+  if (theme.vertical) {
     convertToVerticalGlyph(text, NSMakeRange(0, text.length));
   }
   [_view setText:text];
@@ -1107,31 +1209,8 @@ static inline NSColor *blendColors(NSColor *foregroundColor,
     // return foregroundColor;
     backgroundColor = [NSColor lightGrayColor];
   }
-
-  struct {
-    CGFloat r, g, b, a;
-  } f, b;
-
-  [[foregroundColor colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]]
-      getRed:&f.r
-       green:&f.g
-        blue:&f.b
-       alpha:&f.a];
-  //NSLog(@"fg: %f %f %f %f", f.r, f.g, f.b, f.a);
-
-  [[backgroundColor colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]]
-      getRed:&b.r
-       green:&b.g
-        blue:&b.b
-       alpha:&b.a];
-  //NSLog(@"bg: %f %f %f %f", b.r, b.g, b.b, b.a);
-
-#define blend_value(f, b) (((f)*2.0 + (b)) / 3.0)
-  return [NSColor colorWithDeviceRed:blend_value(f.r, b.r)
-                               green:blend_value(f.g, b.g)
-                                blue:blend_value(f.b, b.b)
-                               alpha:f.a];
-#undef blend_value
+  return [[foregroundColor blendedColorWithFraction:kBlendedBackgroundColorFraction ofColor:backgroundColor]
+          colorWithAlphaComponent:foregroundColor.alphaComponent];
 }
 
 static NSFontDescriptor *getFontDescriptor(NSString *fullname) {
@@ -1193,17 +1272,25 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
   }
 }
 
--(void)updateConfig:(SquirrelConfig *)config {
-  updateCandidateListLayout(&_linear, config, @"style");
-  updateTextOrientation(&_vertical, config, @"style");
-  _inlinePreedit = [config getBool:@"style/inline_preedit"];
+-(void)loadConfig:(SquirrelConfig *)config forDarkMode:(BOOL)isDark {
+  SquirrelTheme *theme = [_view selectTheme:isDark];
+  [[self class] updateTheme:theme withConfig:config forDarkMode:isDark];
+}
+
++(void)updateTheme:(SquirrelTheme *)theme withConfig:(SquirrelConfig *)config forDarkMode:(BOOL)isDark {
+  BOOL linear = NO;
+  BOOL vertical = NO;
+  updateCandidateListLayout(&linear, config, @"style");
+  updateTextOrientation(&vertical, config, @"style");
+  BOOL inlinePreedit = [config getBool:@"style/inline_preedit"];
   NSString *candidateFormat = [config getString:@"style/candidate_format"];
-  _candidateFormat = candidateFormat ? candidateFormat : kDefaultCandidateFormat;
 
   NSString *fontName = [config getString:@"style/font_face"];
   NSInteger fontSize = [config getInt:@"style/font_point"];
   NSString *labelFontName = [config getString:@"style/label_font_face"];
   NSInteger labelFontSize = [config getInt:@"style/label_font_point"];
+  NSString *commentFontName = [config getString:@"style/comment_font_face"];
+  NSInteger commentFontSize = [config getInt:@"style/comment_font_point"];
   CGFloat alpha = fmin(fmax([config getDouble:@"style/alpha"], 0.0), 1.0);
   CGFloat cornerRadius = [config getDouble:@"style/corner_radius"];
   CGFloat hilitedCornerRadius = [config getDouble:@"style/hilited_corner_radius"];
@@ -1226,10 +1313,20 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
   NSColor *highlightedCandidateBackColor;
   NSColor *commentTextColor;
   NSColor *highlightedCommentTextColor;
-  
-  NSString *colorScheme = [config getString:@"style/color_scheme"];
-  if (colorScheme) {
+
+  NSString *colorScheme;
+  if (isDark) {
+    colorScheme = [config getString:@"style/color_scheme_dark"];
+  }
+  if (!colorScheme) {
+    colorScheme = [config getString:@"style/color_scheme"];
+  }
+  BOOL isNative = !colorScheme || [colorScheme isEqualToString:@"native"];
+  if (!isNative) {
     NSString *prefix = [@"preset_color_schemes/" stringByAppendingString:colorScheme];
+    if (@available(macOS 10.12, *)) {
+      config.colorSpace = [config getString:[prefix stringByAppendingString:@"/color_space"]];
+    }
     backgroundColor = [config getColor:[prefix stringByAppendingString:@"/back_color"]];
     borderColor = [config getColor:[prefix stringByAppendingString:@"/border_color"]];
     preeditBackgroundColor = [config getColor:[prefix stringByAppendingString:@"/preedit_back_color"]];
@@ -1266,18 +1363,18 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
     // the following per-color-scheme configurations, if exist, will
     // override configurations with the same name under the global 'style' section
 
-    updateCandidateListLayout(&_linear, config, prefix);
-    updateTextOrientation(&_vertical, config, prefix);
+    updateCandidateListLayout(&linear, config, prefix);
+    updateTextOrientation(&vertical, config, prefix);
 
     NSNumber *inlinePreeditOverridden =
         [config getOptionalBool:[prefix stringByAppendingString:@"/inline_preedit"]];
     if (inlinePreeditOverridden) {
-      _inlinePreedit = inlinePreeditOverridden.boolValue;
+      inlinePreedit = inlinePreeditOverridden.boolValue;
     }
     NSString *candidateFormatOverridden =
         [config getString:[prefix stringByAppendingString:@"/candidate_format"]];
     if (candidateFormatOverridden) {
-      _candidateFormat = candidateFormatOverridden;
+      candidateFormat = candidateFormatOverridden;
     }
 
     NSString *fontNameOverridden =
@@ -1299,6 +1396,16 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
         [config getOptionalInt:[prefix stringByAppendingString:@"/label_font_point"]];
     if (labelFontSizeOverridden) {
       labelFontSize = labelFontSizeOverridden.integerValue;
+    }
+    NSString *commentFontNameOverridden =
+        [config getString:[prefix stringByAppendingString:@"/comment_font_face"]];
+    if (commentFontNameOverridden) {
+      commentFontName = commentFontNameOverridden;
+    }
+    NSNumber *commentFontSizeOverridden =
+        [config getOptionalInt:[prefix stringByAppendingString:@"/comment_font_point"]];
+    if (commentFontSizeOverridden) {
+      commentFontSize = commentFontSizeOverridden.integerValue;
     }
     NSColor *candidateLabelColorOverridden =
         [config getColor:[prefix stringByAppendingString:@"/label_color"]];
@@ -1364,6 +1471,9 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
   if (labelFontSize == 0) {
     labelFontSize = fontSize;
   }
+  if (commentFontSize == 0) {
+    commentFontSize = fontSize;
+  }
   NSFontDescriptor *fontDescriptor = nil;
   NSFont *font = nil;
   if (fontName != nil) {
@@ -1394,7 +1504,25 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
       labelFont = [NSFont fontWithName:font.fontName size:labelFontSize];
     }
   }
-  
+  NSFontDescriptor *commentFontDescriptor = nil;
+  NSFont *commentFont = nil;
+  if (commentFontName != nil) {
+    commentFontDescriptor = getFontDescriptor(commentFontName);
+    if (commentFontDescriptor == nil) {
+      commentFontDescriptor = fontDescriptor;
+    }
+    if (commentFontDescriptor != nil) {
+      commentFont = [NSFont fontWithDescriptor:commentFontDescriptor size:commentFontSize];
+    }
+  }
+  if (commentFont == nil) {
+    if (fontDescriptor != nil) {
+      commentFont = [NSFont fontWithDescriptor:fontDescriptor size:commentFontSize];
+    } else {
+      commentFont = [NSFont fontWithName:font.fontName size:commentFontSize];
+    }
+  }
+
   NSMutableParagraphStyle *paragraphStyle =
       [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
   paragraphStyle.paragraphSpacing = lineSpacing / 2;
@@ -1402,71 +1530,95 @@ static void updateTextOrientation(BOOL *isVerticalText, SquirrelConfig *config, 
 
   NSMutableParagraphStyle *preeditParagraphStyle =
       [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
-  preeditParagraphStyle.paragraphSpacing = spacing;
+  preeditParagraphStyle.paragraphSpacing = spacing / 2 + hilitedCornerRadius / 2;
 
-  {
-    _attrs[NSFontAttributeName] = font;
-    _highlightedAttrs[NSFontAttributeName] = font;
-    _labelAttrs[NSFontAttributeName] = labelFont;
-    _labelHighlightedAttrs[NSFontAttributeName] = labelFont;
-    _commentAttrs[NSFontAttributeName] = font;
-    _commentHighlightedAttrs[NSFontAttributeName] = font;
-    _preeditAttrs[NSFontAttributeName] = font;
-    _preeditHighlightedAttrs[NSFontAttributeName] = font;
-    _attrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _highlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _labelAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _labelHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _commentAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _commentHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _preeditAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _preeditHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
-    _paragraphStyle = paragraphStyle;
-    _preeditParagraphStyle = preeditParagraphStyle;
-  }
+  NSMutableDictionary *attrs = [theme.attrs mutableCopy];
+  NSMutableDictionary *highlightedAttrs = [theme.highlightedAttrs mutableCopy];
+  NSMutableDictionary *labelAttrs = [theme.labelAttrs mutableCopy];
+  NSMutableDictionary *labelHighlightedAttrs = [theme.labelHighlightedAttrs mutableCopy];
+  NSMutableDictionary *commentAttrs = [theme.commentAttrs mutableCopy];
+  NSMutableDictionary *commentHighlightedAttrs = [theme.commentHighlightedAttrs mutableCopy];
+  NSMutableDictionary *preeditAttrs = [theme.preeditAttrs mutableCopy];
+  NSMutableDictionary *preeditHighlightedAttrs = [theme.preeditHighlightedAttrs mutableCopy];
+
+  attrs[NSFontAttributeName] = font;
+  highlightedAttrs[NSFontAttributeName] = font;
+  labelAttrs[NSFontAttributeName] = labelFont;
+  labelHighlightedAttrs[NSFontAttributeName] = labelFont;
+  commentAttrs[NSFontAttributeName] = commentFont;
+  commentHighlightedAttrs[NSFontAttributeName] = commentFont;
+  preeditAttrs[NSFontAttributeName] = font;
+  preeditHighlightedAttrs[NSFontAttributeName] = font;
+  attrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  highlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  labelAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  labelHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  commentAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  commentHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  preeditAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+  preeditHighlightedAttrs[NSBaselineOffsetAttributeName] = @(baseOffset);
+
+  NSColor *secondaryTextColor = [[self class] secondaryTextColor];
+
   backgroundColor = backgroundColor ? backgroundColor : [NSColor windowBackgroundColor];
   candidateTextColor = candidateTextColor ? candidateTextColor : [NSColor controlTextColor];
-  candidateLabelColor = candidateLabelColor ? candidateLabelColor : blendColors(candidateTextColor, backgroundColor);
+  candidateLabelColor = candidateLabelColor ? candidateLabelColor :
+  isNative ? secondaryTextColor : blendColors(candidateTextColor, backgroundColor);
   highlightedCandidateTextColor = highlightedCandidateTextColor ? highlightedCandidateTextColor : [NSColor selectedControlTextColor];
   highlightedCandidateBackColor = highlightedCandidateBackColor ? highlightedCandidateBackColor : [NSColor selectedTextBackgroundColor];
-  highlightedCandidateLabelColor = highlightedCandidateLabelColor ? highlightedCandidateLabelColor
-    : blendColors(highlightedCandidateTextColor, highlightedCandidateBackColor);
-  commentTextColor = commentTextColor ? commentTextColor : [NSColor disabledControlTextColor];
+  highlightedCandidateLabelColor = highlightedCandidateLabelColor ? highlightedCandidateLabelColor :
+  isNative ? secondaryTextColor : blendColors(highlightedCandidateTextColor, highlightedCandidateBackColor);
+  commentTextColor = commentTextColor ? commentTextColor : secondaryTextColor;
   highlightedCommentTextColor = highlightedCommentTextColor ? highlightedCommentTextColor : commentTextColor;
-  textColor = textColor ? textColor : [NSColor disabledControlTextColor];
+  textColor = textColor ? textColor : secondaryTextColor;
   highlightedTextColor = highlightedTextColor ? highlightedTextColor : [NSColor controlTextColor];
-  {
-    _attrs[NSForegroundColorAttributeName] = candidateTextColor;
-    _labelAttrs[NSForegroundColorAttributeName] = candidateLabelColor;
-    _highlightedAttrs[NSForegroundColorAttributeName] = highlightedCandidateTextColor;
-    _labelHighlightedAttrs[NSForegroundColorAttributeName] = highlightedCandidateLabelColor;
-    _commentAttrs[NSForegroundColorAttributeName] = commentTextColor;
-    _commentHighlightedAttrs[NSForegroundColorAttributeName] = highlightedCommentTextColor;
-    _preeditAttrs[NSForegroundColorAttributeName] = textColor;
-    _preeditHighlightedAttrs[NSForegroundColorAttributeName] = highlightedTextColor;
-  }
-  [_view setBackgroundColor:backgroundColor
+
+  attrs[NSForegroundColorAttributeName] = candidateTextColor;
+  labelAttrs[NSForegroundColorAttributeName] = candidateLabelColor;
+  highlightedAttrs[NSForegroundColorAttributeName] = highlightedCandidateTextColor;
+  labelHighlightedAttrs[NSForegroundColorAttributeName] = highlightedCandidateLabelColor;
+  commentAttrs[NSForegroundColorAttributeName] = commentTextColor;
+  commentHighlightedAttrs[NSForegroundColorAttributeName] = highlightedCommentTextColor;
+  preeditAttrs[NSForegroundColorAttributeName] = textColor;
+  preeditHighlightedAttrs[NSForegroundColorAttributeName] = highlightedTextColor;
+
+  [theme          setAttrs:attrs
+                labelAttrs:labelAttrs
+          highlightedAttrs:highlightedAttrs
+     labelHighlightedAttrs:labelHighlightedAttrs
+              commentAttrs:commentAttrs
+   commentHighlightedAttrs:commentHighlightedAttrs
+              preeditAttrs:preeditAttrs
+   preeditHighlightedAttrs:preeditHighlightedAttrs];
+
+  [theme setParagraphStyle:paragraphStyle
+     preeditParagraphStyle:preeditParagraphStyle];
+
+  [theme setBackgroundColor:backgroundColor
       highlightedStripColor:highlightedCandidateBackColor
     highlightedPreeditColor:highlightedBackColor
      preeditBackgroundColor:preeditBackgroundColor
                 borderColor:borderColor];
-  
+
   NSSize edgeInset;
-  if (_vertical) {
+  if (vertical) {
     edgeInset = NSMakeSize(MAX(borderHeight, cornerRadius), MAX(borderWidth, cornerRadius));
   } else {
     edgeInset = NSMakeSize(MAX(borderWidth, cornerRadius), MAX(borderHeight, cornerRadius));
   }
-  [_view setCornerRadius:cornerRadius
+
+  [theme setCornerRadius:cornerRadius
      hilitedCornerRadius:hilitedCornerRadius
                edgeInset:edgeInset
              borderWidth:MIN(borderHeight, borderWidth)
                linespace:lineSpacing
         preeditLinespace:spacing
-              linear:_linear
-                vertical:_vertical
-           inlinePreedit:_inlinePreedit];
+                   alpha:(alpha == 0 ? 1.0 : alpha)
+                  linear:linear
+                vertical:vertical
+           inlinePreedit:inlinePreedit];
 
-  _alphaValue = (alpha == 0) ? 1.0 : alpha;
+  theme.native = isNative;
+  theme.candidateFormat = (candidateFormat ? candidateFormat : kDefaultCandidateFormat);
 }
 @end
